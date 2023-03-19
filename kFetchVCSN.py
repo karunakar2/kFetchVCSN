@@ -42,16 +42,15 @@ class kFetchVCSN:
     def __init__(self,apiUrl:str='',refreshInterval:'sec'=3*60*60,enableDebug:'boolean' = False):
         #this is the key to let other functions know if we need debugging info
         self.debug = enableDebug
-        
+
         #the caching reduces the number of hits to the origin server
         if refreshInterval > 0:
             reqC.install_cache('VCSN_cache', backend='sqlite', expire_after=refreshInterval)
-            
-        if apiUrl == '':
-            self._apiRoot = "https://mintaka.niwa.co.nz/rest/api/V1.1/products/geo/data/1" #/"
-        else:
-            self._apiRoot = apiUrl
-            
+
+        self._apiRoot = (
+            apiUrl
+            or "https://mintaka.niwa.co.nz/rest/api/V1.1/products/geo/data/1"
+        )
         #load the default files
         self._loadGridLocation()
         self._loadMeasurementTypes()
@@ -97,19 +96,19 @@ class kFetchVCSN:
     def __get_timeSpan(self,site,measurement):
         if isinstance(measurement,str):
             measurement = self.__get_measurementId(measurement)
-        elif isinstance(measurement,int) or isinstance(measurement,np.int64):
-            pass
-        else:
+        elif not isinstance(measurement, int) and not isinstance(
+            measurement, np.int64
+        ):
             raise Exception('please refer to a proper measurement code that NIWA provides on web portal.')
-        
-        if isinstance(site,int) or isinstance(site,np.int64):
+
+        if isinstance(site, (int, np.int64)):
             agentNo = site
         elif isinstance(site,tuple):
             agentNo = self.__get_agentNo(site)
         else:
             print(type(site))
             raise Exception('please refer to a proper agent no that NIWA provides on web portal.')
-        
+
         myWebRequest = self._apiRoot+'/'+str(agentNo)+'/'+str(measurement)
         reply = self.__webFetch(myWebRequest)
         """
@@ -120,7 +119,7 @@ class kFetchVCSN:
         else :
             raise Exception('issue with web reply',reply.text)
         """
-        if isinstance(reply,tuple) and reply[0] == None:
+        if isinstance(reply, tuple) and reply[0] is None:
             return None
         else:
             return [dp.parse(reply['startDate']),dp.parse(reply['endDate'])]
@@ -200,14 +199,13 @@ class kFetchVCSN:
             return r.json()
         
     def __get_measName(self,measurement=None):
-        if measurement != None:
-            if isinstance(measurement,str):
-                measurement = int(measurement)
-            temp = self.__measTable[self.__measTable['PRODUCTID']==measurement]
-            #print(temp)
-            return temp['propName'].values[0]
-        else:
+        if measurement is None:
             return None
+        if isinstance(measurement,str):
+            measurement = int(measurement)
+        temp = self.__measTable[self.__measTable['PRODUCTID']==measurement]
+        #print(temp)
+        return temp['propName'].values[0]
     #---------------------------------------------------------------------
     #Public functions
     #---------------------------------------------------------------------
@@ -271,12 +269,11 @@ class kFetchVCSN:
     
     #credentials need to be set.
     def __setCredentials(self, arg):
-        if isinstance(arg,tuple):
-            (userName, passWord) = arg
-            self._uName = userName
-            self._uPswd = passWord
-        else:
+        if not isinstance(arg, tuple):
             raise Exception ('expected (username,password), not', arg)
+        (userName, passWord) = arg
+        self._uName = userName
+        self._uPswd = passWord
     def __getCreds(self):
         return None
         
